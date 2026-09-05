@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0A1119">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Brun Signals</title>
+<link rel="manifest" href="data:application/json,{%22name%22:%22Brun%20Signals%22,%22short_name%22:%22Brun%22,%22start_url%22:%22.%22,%22display%22:%22standalone%22,%22background_color%22:%22%230A1119%22,%22theme_color%22:%22%230A1119%22,%22icons%22:[]}">
+<style>
+  :root{
+    --ink:#0A1119;        /* petroleum */
+    --ink-2:#111C27;
+    --rule:#1E2E3D;
+    --paper:#E8E4DC;
+    --dim:#7B8B99;
+    --long:#5B8C7B;       /* muted slate-green */
+    --short:#B4654A;      /* rust */
+    --live:#F2C14E;       /* the only bright thing: proximity */
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    background:var(--ink);color:var(--paper);
+    font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    font-variant-numeric:tabular-nums;
+    padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+    min-height:100vh;line-height:1.45;
+  }
+  header{
+    padding:22px 20px 16px;border-bottom:1px solid var(--rule);
+    display:flex;justify-content:space-between;align-items:baseline;gap:12px;
+  }
+  h1{font-size:15px;font-weight:600;letter-spacing:.02em}
+  .stamp{font-size:11px;color:var(--dim)}
+  main{padding:8px 14px 40px;max-width:640px;margin:0 auto}
+
+  .card{
+    background:var(--ink-2);border:1px solid var(--rule);
+    border-radius:3px;margin:12px 0;padding:16px 16px 14px;
+  }
+  .top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px}
+  .sym{font-size:19px;font-weight:600;letter-spacing:.01em}
+  .side{font-size:12px;font-weight:600;padding:2px 8px;border-radius:2px}
+  .side.l{color:var(--long);border:1px solid var(--long)}
+  .side.s{color:var(--short);border:1px solid var(--short)}
+  .meta{font-size:11px;color:var(--dim);margin-bottom:16px}
+
+  /* the approach track — where price sits between stop, entry and target */
+  .track{position:relative;height:34px;margin:0 0 6px}
+  .rail{position:absolute;top:16px;left:0;right:0;height:1px;background:var(--rule)}
+  .seg{position:absolute;top:16px;height:1px}
+  .seg.risk{background:var(--short);opacity:.5}
+  .seg.reward{background:var(--long);opacity:.5}
+  .tick{position:absolute;top:10px;width:1px;height:13px;background:var(--dim)}
+  .tick.entry{height:19px;top:7px;background:var(--paper)}
+  .now{
+    position:absolute;top:9px;width:9px;height:9px;border-radius:50%;
+    background:var(--live);transform:translateX(-4px);
+    box-shadow:0 0 0 4px rgba(242,193,78,.16);
+  }
+  .tlabel{position:absolute;top:26px;font-size:9px;color:var(--dim);transform:translateX(-50%);white-space:nowrap}
+
+  .rows{margin-top:14px;border-top:1px solid var(--rule);padding-top:12px}
+  .row{display:flex;justify-content:space-between;font-size:13px;padding:3px 0}
+  .row span:first-child{color:var(--dim)}
+  .row.k span:last-child{font-weight:600}
+  .near{color:var(--live)}
+
+  .empty{padding:64px 20px;text-align:center;color:var(--dim);font-size:13px}
+  .empty b{display:block;color:var(--paper);font-size:15px;margin-bottom:8px;font-weight:600}
+  button{
+    font:inherit;font-size:12px;color:var(--paper);background:none;
+    border:1px solid var(--rule);border-radius:2px;padding:7px 14px;cursor:pointer;
+  }
+  button:active{background:var(--rule)}
+  button:focus-visible{outline:2px solid var(--live);outline-offset:2px}
+  footer{padding:20px;text-align:center;font-size:11px;color:var(--dim);line-height:1.7}
+  @media(prefers-reduced-motion:no-preference){
+    .card{animation:in .25s ease-out both}
+    @keyframes in{from{opacity:0;transform:translateY(4px)}}
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Brun signals</h1>
+  <span class="stamp" id="stamp">loading</span>
+</header>
+<main id="app"></main>
+<footer>
+  Confirm the structure on TradingView before entering.<br>
+  <span id="cfg"></span>
+</footer>
+
+<script>
+const SRC = 'signals.json';          // written by the scanner each run
+
+function pos(p, lo, hi){ return Math.max(0, Math.min(100, (p - lo) / (hi - lo) * 100)); }
+
+function card(s){
+  const long = s.dir === 'LONG';
+  // order the track from stop -> entry -> target regardless of direction
+  const lo = Math.min(s.stop, s.target), hi = Math.max(s.stop, s.target);
+  const pad = (hi - lo) * 0.08;
+  const L = lo - pad, Hh = hi + pad;
+  const pE = pos(s.entry, L, Hh), pS = pos(s.stop, L, Hh),
+        pT = pos(s.target, L, Hh), pN = pos(s.last, L, Hh);
+  const riskA = Math.min(pE, pS), riskW = Math.abs(pE - pS);
+  const rewA  = Math.min(pE, pT), rewW  = Math.abs(pE - pT);
+  const imminent = s.atr_away <= 0.5;
+
+  return `<article class="card">
+    <div class="top">
+      <span class="sym">${s.symbol}</span>
+      <span class="side ${long ? 'l' : 's'}">${s.dir}</span>
+    </div>
+    <div class="meta">Setup ${s.tier} · ${s.regime} regime · effort ${s.effort}&times;</div>
+
+    <div class="track" role="img" aria-label="price ${s.last} between stop ${s.stop} and target ${s.target}">
+      <div class="rail"></div>
+      <div class="seg risk"   style="left:${riskA}%;width:${riskW}%"></div>
+      <div class="seg reward" style="left:${rewA}%;width:${rewW}%"></div>
+      <div class="tick"       style="left:${pS}%"></div>
+      <div class="tick entry" style="left:${pE}%"></div>
+      <div class="tick"       style="left:${pT}%"></div>
+      <div class="now"        style="left:${pN}%"></div>
+      <div class="tlabel" style="left:${pS}%">stop</div>
+      <div class="tlabel" style="left:${pE}%">entry</div>
+      <div class="tlabel" style="left:${pT}%">target</div>
+    </div>
+
+    <div class="rows">
+      <div class="row k"><span>Entry</span><span>${s.entry.toFixed(2)}</span></div>
+      <div class="row"><span>Stop</span><span>${s.stop.toFixed(2)}</span></div>
+      <div class="row"><span>Target</span><span>${s.target.toFixed(2)} &nbsp;${s.rr}R</span></div>
+      <div class="row"><span>Last traded</span><span>${s.last.toFixed(2)}</span></div>
+      <div class="row"><span>Distance to entry</span>
+        <span class="${imminent ? 'near' : ''}">${s.atr_away} ATR</span></div>
+    </div>
+  </article>`;
+}
+
+async function load(){
+  const app = document.getElementById('app');
+  try{
+    const r = await fetch(SRC + '?t=' + Date.now(), {cache:'no-store'});
+    if(!r.ok) throw new Error(r.status);
+    const d = await r.json();
+    const t = new Date(d.updated);
+    document.getElementById('stamp').textContent =
+      t.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}) + ' IST';
+    document.getElementById('cfg').textContent =
+      `${d.scanned} symbols · ${d.interval} · rr 2.5 · setups 1 and 3`;
+    app.innerHTML = d.signals.length
+      ? d.signals.map(card).join('')
+      : `<div class="empty"><b>Nothing at a level</b>
+         Price is not near a validated zone on any symbol.
+         The scan runs again in 30 minutes.</div>`;
+  }catch(e){
+    app.innerHTML = `<div class="empty"><b>No scan data yet</b>
+      The scanner has not published signals.json.
+      Run the workflow once from the Actions tab, then reload.
+      <br><br><button onclick="load()">Try again</button></div>`;
+  }
+}
+load();
+setInterval(load, 60000);
+document.addEventListener('visibilitychange', () => { if(!document.hidden) load(); });
+
+if('serviceWorker' in navigator){
+  const sw = `self.addEventListener('fetch', e => {
+    if(e.request.url.includes('signals.json')) return;
+    e.respondWith(caches.open('brun').then(c =>
+      c.match(e.request).then(r => r || fetch(e.request).then(n => {c.put(e.request, n.clone()); return n;}))));
+  });`;
+  navigator.serviceWorker.register(URL.createObjectURL(new Blob([sw],{type:'text/javascript'}))).catch(()=>{});
+}
+</script>
+</body>
+</html>
