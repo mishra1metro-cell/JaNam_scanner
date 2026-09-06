@@ -146,6 +146,11 @@ def scan_symbol(O, H, L, C, V, minValid=2, fib=0.75, rr=2.5, slBuf=0.10,
 
 
 # ------------------------------------------------------------- watchlists ---
+# Indices and commodities. yfinance tickers differ from NSE equity symbols:
+# ^NSEI = Nifty 50, ^NSEBANK = Bank Nifty, CL=F = WTI crude, BZ=F = Brent.
+# MCX crude is not on yfinance; CL=F is the closest proxy and moves with it.
+INDICES = {'^NSEI': 'NIFTY', '^NSEBANK': 'BANKNIFTY', 'CL=F': 'CRUDE', 'BZ=F': 'BRENT'}
+
 NIFTY50 = ("RELIANCE TCS HDFCBANK ICICIBANK INFY HINDUNILVR ITC SBIN BHARTIARTL BAJFINANCE "
            "KOTAKBANK LT AXISBANK ASIANPAINT MARUTI SUNPHARMA TITAN ULTRACEMCO WIPRO NESTLEIND "
            "ONGC NTPC POWERGRID TATAMOTORS TATASTEEL M&M HCLTECH ADANIENT JSWSTEEL COALINDIA "
@@ -155,7 +160,8 @@ NIFTY50 = ("RELIANCE TCS HDFCBANK ICICIBANK INFY HINDUNILVR ITC SBIN BHARTIARTL 
 
 def fetch(sym, interval='15m', period='60d'):
     import yfinance as yf
-    t = f"{sym}.NS" if not sym.endswith('.NS') else sym
+    # indices and futures carry their own ticker format; equities need .NS
+    t = sym if (sym in INDICES or sym.endswith('.NS') or '=' in sym or sym.startswith('^')) else f"{sym}.NS"
     df = yf.download(t, interval=interval, period=period, progress=False, auto_adjust=False)
     if df is None or len(df) < 400: return None
     if isinstance(df.columns, pd.MultiIndex): df.columns = df.columns.get_level_values(0)
@@ -182,17 +188,24 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--source', default='yf', choices=['yf', 'kite'],
                     help='kite = real-time via Kite Connect; yf = ~15 min delayed')
-    ap.add_argument('--watchlist', default='nifty50')
+    ap.add_argument('--watchlist', default='all', choices=['all', 'indices', 'equities'],
+                    help='all = Nifty, Bank Nifty, crude and the Nifty 50 stocks')
     ap.add_argument('--symbols', default='', help='comma-separated, overrides watchlist')
     ap.add_argument('--interval', default='15m')
     ap.add_argument('--period', default='60d')
-    ap.add_argument('--top', type=int, default=2, help='how many setups to send')
+    ap.add_argument('--top', type=int, default=5, help='how many setups to send')
     ap.add_argument('--maxatr', type=float, default=1.5,
                     help='only alert if price is within this many ATR of the entry')
     a = ap.parse_args()
 
-    syms = ([s.strip().upper() for s in a.symbols.split(',') if s.strip()]
-            if a.symbols else NIFTY50)
+    if a.symbols:
+        syms = [s.strip() for s in a.symbols.split(',') if s.strip()]
+    elif a.watchlist == 'indices':
+        syms = list(INDICES)
+    elif a.watchlist == 'equities':
+        syms = NIFTY50
+    else:                                   # 'all' — indices first, then equities
+        syms = list(INDICES) + NIFTY50
 
     # pick the data source
     if a.source == 'kite':
@@ -216,7 +229,7 @@ def main():
                 atr_est = abs(r['entry'] - r['stop']) / max(0.10, 1e-9)
                 r['atr_away'] = round(abs(r['last'] - r['entry']) / max(atr_est, 1e-9), 2)
             if r and r['atr_away'] <= a.maxatr:
-                r['symbol'] = s; found.append(r)
+                r['symbol'] = INDICES.get(s, s); found.append(r)
         except Exception as e:
             print(f"  {s}: {e}")
         time.sleep(0.15)
