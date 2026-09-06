@@ -1,0 +1,86 @@
+{
+ "updated": "2026-09-06T09:17:26.110008+05:30",
+ "interval": "15m",
+ "source": "yf",
+ "scanned": 50,
+ "signals": [
+  {
+   "tier": 1,
+   "dir": "SHORT",
+   "entry": 5102.0,
+   "stop": 5146.898164382449,
+   "target": 4989.754589043878,
+   "rr": 2.5,
+   "effort": 4.01,
+   "atr_away": 0.04,
+   "last": 5101.5,
+   "regime": "BEAR",
+   "symbol": "BRITANNIA"
+  },
+  {
+   "tier": 1,
+   "dir": "LONG",
+   "entry": 425.0,
+   "stop": 423.3149790056458,
+   "target": 429.2125524858855,
+   "rr": 2.5,
+   "effort": 1.21,
+   "atr_away": 0.59,
+   "last": 424.5,
+   "regime": "BULL",
+   "symbol": "KOTAKBANK"
+  },
+  {
+   "tier": 1,
+   "dir": "LONG",
+   "entry": 583.8499755859375,
+   "stop": 581.8841872695724,
+   "target": 588.7644463768502,
+   "rr": 2.5,
+   "effort": 1.72,
+   "atr_away": 0.79,
+   "last": 582.1500244140625,
+   "regime": "BULL",
+   "symbol": "UPL"
+  },
+  {
+   "tier": 1,
+   "dir": "LONG",
+   "entry": 1769.0,
+   "stop": 1757.857803661639,
+   "target": 1796.8554908459023,
+   "rr": 2.5,
+   "effort": 6.71,
+   "atr_away": 0.93,
+   "last": 1775.0,
+   "regime": "BULL",
+   "symbol": "SBILIFE"
+  },
+  {
+   "tier": 1,
+   "dir": "SHORT",
+   "entry": 1592.699951171875,
+   "stop": 1603.5481938046073,
+   "target": 1565.5793445900442,
+   "rr": 2.5,
+   "effort": 1.99,
+   "atr_away": 0.94,
+   "last": 1596.9000244140625,
+   "regime": "BEAR",
+   "symbol": "TECHM"
+  },
+  {
+   "tier": 1,
+   "dir": "SHORT",
+   "entry": 5003.5,
+   "stop": 5041.145394603948,
+   "target": 4909.38651349013,
+   "rr": 2.5,
+   "effort": 1.37,
+   "atr_away": 1.44,
+   "last": 5020.0,
+   "regime": "BEAR",
+   "symbol": "TITAN"
+  }
+ ]
+}
