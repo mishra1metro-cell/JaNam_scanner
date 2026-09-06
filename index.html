@@ -152,7 +152,7 @@ async function load(){
     document.getElementById('stamp').textContent =
       t.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}) + ' IST';
     document.getElementById('cfg').textContent =
-      `${d.scanned} symbols · ${d.interval} · rr 2.5 · setups 1 and 3`;
+      `${d.scanned} symbols · ${d.interval} · ${d.source==='kite'?'live':'delayed'} · rr 2.5 · top 5`;
     app.innerHTML = d.signals.length
       ? d.signals.map(card).join('')
       : `<div class="empty"><b>Nothing at a level</b>
