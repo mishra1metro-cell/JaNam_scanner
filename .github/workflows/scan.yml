@@ -26,9 +26,11 @@ jobs:
         run: python live_scanner.py --watchlist nifty50 --top 2 --maxatr 1.5
 
       - name: Publish signals
+        continue-on-error: true
         run: |
           git config user.name github-actions
           git config user.email actions@github.com
           git add signals.json
           git diff --staged --quiet || git commit -m "scan update"
+          git pull --rebase --autostash
           git push
